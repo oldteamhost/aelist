@@ -134,6 +134,12 @@ static u0 fucksearch(const str &buf)
   for (auto&node:nodes)
     if (node.getname().find(buf)!=std::string::npos)
       res[(node.getname())]=node;
+  if (res.empty()) {
+    cls(u0);
+    if (long_m)
+      std::cout << "0";
+    std::cout << ": " << buf;
+  }
   if (!res.empty()) {
     if (long_m) {
       cls(u0);
