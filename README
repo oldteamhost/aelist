@@ -1,0 +1,59 @@
+Консольный менеджер приложений для linux вроде dmenu; поддерживает поиск и 3
+режима вывода, очень быстрый. Для компиляции нужно просто запустить Makefile
+в корневой папки, т.е в папке с sapps.cc.
+
+1. Режим line для поиска в одну строчку:
+
+  loaded 12304 files from 6 paths (3.23 GiB)
+  : firefox 2
+
+2. Режим long для поиска в много сторочек:
+
+  ...,
+  zipinfo
+  zmf2raw
+  zmf2svg
+  717: f
+
+3. Режим random для выбора рандомного режима из множества {line, long}:
+
+   ????
+   ????
+
+Для установки его в i3 можно сделать такой бинд,
+  bindsym $<клавиша> exec --no-startup-id  <ваш терминал>  <путь к sapps>  <режим работы>
+
+Например, у меня стоит так,
+  bindsym $mod+d exec --no-startup-id kitty /home/lomaster/test/sapps random
+
+
+                               *                 *                 *
+
+
+Console application manager for linux like dmenu; supports search and
+3 output modes, very fast. For compilation you just need to run Makefile
+in the root folder, i.e. in the folder with sapps.cc.
+
+1. Line mode for one line search:
+
+  loaded 12304 files from 6 paths (3.23 GiB)
+  : firefox 2
+
+2. Long mode for searching in multiple lines:
+
+  ...,
+  zipinfo
+  zmf2raw
+  zmf2svg
+  717: f
+
+3. Random mode to select a random mode from the {line, long} set:
+
+   ????
+   ????
+
+To set it in i3 you can make a bind like this,
+  bindsym $<key> exec --no-startup-id <your terminal> <path to sapps> <mode>.
+
+For example, I have it set like this,
+  bindsym $mod+d exec --no-startup-id kitty /home/lomaster/test/sapps random
