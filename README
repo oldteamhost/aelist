@@ -24,7 +24,7 @@
   bindsym $<клавиша> exec --no-startup-id  <ваш терминал>  <путь к sapps>  <режим работы>
 
 Например, у меня стоит так,
-  bindsym $mod+d exec --no-startup-id kitty /home/lomaster/test/sapps random
+  bindsym $mod+d exec --no-startup-id kitty /home/lomaster/sapps/sapps long
 
 
                                *                 *                 *
@@ -56,4 +56,4 @@ To set it in i3 you can make a bind like this,
   bindsym $<key> exec --no-startup-id <your terminal> <path to sapps> <mode>.
 
 For example, I have it set like this,
-  bindsym $mod+d exec --no-startup-id kitty /home/lomaster/test/sapps random
+  bindsym $mod+d exec --no-startup-id kitty /home/lomaster/sapps/sapps long
