@@ -1,16 +1,6 @@
-TARGET=sapps
-CXX=g++
-CXXFLAGS=-Wall -O3
-SRCS=sapps.cc
-OBJS=$(SRCS:.cc=.o)
-
-all: $(TARGET)
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^
-%.o: %.cc
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+FLAGS=-lncursesw -lpanel -O3
+all:
+	gcc sout.c -c $(FLAGS)
+	gcc sout.o -o sout $(FLAGS)
 clean:
-	rm -f $(OBJS) $(TARGET)
-
-.PHONY: all clean
-
+	rm sout.o sout
