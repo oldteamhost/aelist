@@ -29,6 +29,7 @@
 
 #include <ncurses.h>
 #include <ctype.h>
+#include <stdio.h>
 #include <time.h>
 #include <panel.h>
 #include <stdlib.h>
@@ -183,12 +184,14 @@ static void search(stargets_t *list, char *input)
   size_t stop, num;
   starget_t *cur;
   int y,x;
+  bool s;
 
   if (!list||!input||!list->targets)
     return;
 
   cur=NULL;
   stop=num=y=x=0;
+  s=0;
   getyx(stdscr, y, x);
   for (cur=list->targets;cur;
     cur=cur->nxt)
@@ -196,10 +199,16 @@ static void search(stargets_t *list, char *input)
       num++;
   for (cur=list->targets,stop=1;
       stop<=(prompts)&&cur;) {
+    if (!strcmp(cur->name, input)) {
+      lpath=cur->path;
+      s=1;
+    }
     if (strstr(cur->name, input)) {
+      if (!s)
+        lpath=cur->path;
       if (mode==M_LONG||mode==M_SHORT) {
         mvprintw((sinfo)?0:1,0, "exec %s (%s)"
-            " %ld\n", cur->path,
+            " %ld\n", lpath,
           util_bytesconv(cur->len), num);
       }
       if (mode==M_LONG) {
@@ -208,7 +217,6 @@ static void search(stargets_t *list, char *input)
           "%s\n", cur->name);
       }
       stop++;
-      lpath=cur->path;
     }
     cur=cur->nxt;
   }
@@ -277,7 +285,7 @@ static void initpaths(char *optarg)
     return;
   }
   t=strtok(optarg, ",");
-  for (o=0;t;o++) {
+  for (o=0;o<numpaths;o++) {
     paths[o]=strdup(t);
     t=strtok(NULL, ",");
   }
@@ -290,7 +298,7 @@ int main(int argc, char **argv)
 needhelp:
     fprintf(stdout, "Usage %s [other flags] -m <mode>\n",
         argv[0]);
-    fprintf(stdout, " -P <path,path,...,> - specify"
+    fprintf(stdout, " -p <path,path,...,> - specify"
       " your paths to search for applications\n");
     fprintf(stdout, " -m <mode> - select mode; modes "
         "is (ll, l, s, r)\n");

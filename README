@@ -34,4 +34,4 @@ To set it in i3 you can make a bind like this,
   bindsym $<key> exec --no-startup-id <your terminal> <path to sout> <mode>.
 
 For example, I have it set like this,
-  bindsym $mod+d exec --no-startup-id kitty /home/lomaster/sout/sout long
+  bindsym $mod+d exec --no-startup-id kitty /home/lomaster/sout/sout -m ll -p "/bin,/sbin"
