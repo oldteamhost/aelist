@@ -336,13 +336,13 @@ needhelp:
   noecho();
   keypad(stdscr, TRUE);
   if (mode==M_LONG||mode==M_SHORT) {
-    if (!sinfo) {
+    if (!sinfo)
       mvprintw(0, 0, "loaded %ld files from %ld paths (%s)\n",
         list->num, numpaths, util_bytesconv(list->totallen));
-      mvprintw(1, 0, "exec ??? ");
-    }
-    else
-      mvprintw(0, 0, "exec ??? ");
+    mvprintw((sinfo)?0:1,0, "exec %s (%s)"
+      " %ld\n", list->targets->path,
+      util_bytesconv(list->targets->len),
+      list->num);
   }
   cpos=(mode==M_LINE)?0:(sinfo)?1:2;
   mvprintw(cpos, 0, ": ");
