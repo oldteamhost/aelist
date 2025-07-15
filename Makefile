@@ -1,6 +1,7 @@
-FLAGS=-lncursesw -ltinfow -lpanel -O3
+FLAGS=-lncursesw -ltinfow -lpanel -O3 -g -Wall
+
 all:
-	gcc sout.c -c $(FLAGS)
-	gcc sout.o -o sout $(FLAGS)
+	gcc aelist.c -c $(FLAGS)
+	gcc aelist.o -o aelist $(FLAGS)
 clean:
-	rm sout.o sout
+	rm aelist.o aelist
