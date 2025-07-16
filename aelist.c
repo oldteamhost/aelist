@@ -44,33 +44,36 @@
 #include <stdlib.h>
 #include <getopt.h>
 
+#define SHORTOPTS	"sLn:lrhS"
+#define DEFAULTNPROMPT	30
+#define MAXPATHS	128
+
 #define MODESHORT	0
 #define MODELINE	1
 #define MODELONG	2
 
-#define SHORTOPTS	"sLn:lrhS"
 #define DEFAULTMODE	MODESHORT
-#define DEFAULTNPROMPT	30
-#define MAXPATHS	128
 
+/* executable file */
 typedef struct __exe_t {
 	char	name[2048];
 	char	path[2048];
 	size_t	siz;
 } exe_t;
 
-int	nprompt;
-int	mode;
-char	*paths[MAXPATHS];
-size_t	npaths;
-exe_t	*execs;
-exe_t	*lexec;
-size_t	execs_cap;
-size_t	totsiz;
-size_t	nexecs;
-u_char	Sflag;
+int	nprompt;		/* -n */
+int	mode;			/* -slLr */
+char	*paths[MAXPATHS];	/* paths from args*/
+size_t	npaths;			/* number paths */
+exe_t	*execs;			/* executables */
+size_t	nexecs;			/* number executables */
+exe_t	*lexe;			/* last exe */
+size_t	execs_cap;		/* for realloc() */
+size_t	totsiz;			/* total size all binares */
+u_char	Sflag;			/* -S */
 
-inline static void noreturn finish(int sig)
+inline static void noreturn
+finish(int sig)
 {
 	(void)sig;
 	endwin();
@@ -79,29 +82,31 @@ inline static void noreturn finish(int sig)
 	exit(0);
 }
 
-static const char *bytesfmt(size_t bytes)
+static const char *
+bytesfmt(size_t bytes)
 {
 	const char *sizes[]={
 		"B", "KiB", "MiB", "GiB", "TiB",
 		"PiB", "EiB"
 	};
-	static char	buffer[32];
+	static char	fmt[32];
 	double		c=(double)bytes;
 	int		i=0;
 
 	for (;c>=1024&&i<6;i++) 
 		c/=1024;
 
-	snprintf(buffer,sizeof(buffer),
+	snprintf(fmt,sizeof(fmt),
 		"%.2f %s",c,sizes[i]);
 
-	return buffer;
+	return fmt;
 }
 
-inline static void exec(void)
+inline static void
+exec(void)
 {
 	pid_t pid;
-	if (!lexec)
+	if (!lexe)
 		return;
 	pid=fork();
 	if (pid==-1)
@@ -115,7 +120,7 @@ inline static void exec(void)
 		open("/dev/null",O_RDONLY);
 		open("/dev/null",O_WRONLY);
 		open("/dev/null",O_WRONLY);
-		execl(lexec->path,lexec->path,(char*)NULL);
+		execl(lexe->path,lexe->path,(char*)NULL);
 		if (execs)
 			free(execs);
 		endwin();
@@ -125,7 +130,8 @@ inline static void exec(void)
 	finish(0);
 }
 
-inline static void search(char *in)
+inline static void
+search(char *in)
 {
 	size_t	fi,n,sum;
 	int	y,x;
@@ -139,15 +145,15 @@ inline static void search(char *in)
 	fi=1;
 	for (n=0;n<nexecs&&fi<=nprompt;n++) {
 		if (!strcmp(execs[n].name,in)) {
-			lexec=&execs[n];
+			lexe=&execs[n];
 			++s;
 		}
 		if (strstr(execs[n].name,in)) {
 			if (!s)
-				lexec=&execs[n];
+				lexe=&execs[n];
 			if (mode==MODELONG||mode==MODESHORT)
 				mvprintw((Sflag)?0:1,0,"exec %s (%s)"
-					" %ld\n",lexec->path,bytesfmt(execs[n].siz),sum);
+					" %ld\n",lexe->path,bytesfmt(execs[n].siz),sum);
 			if (mode==MODELONG) {
 				mvhline((Sflag)?2:3,0,ACS_HLINE,45);
 				mvprintw(fi+((Sflag)?2:3),0,"%s\n",
@@ -160,7 +166,8 @@ inline static void search(char *in)
 	move(y,x);
 }
 
-inline static void init(void)
+inline static void
+init(void)
 {
 	exe_t		exe;
 	char		buf[65535];
@@ -207,7 +214,8 @@ inline static void init(void)
 	}
 }
 
-inline static int loop(void)
+inline static int
+loop(void)
 {
 	char	in[2048];
 	chtype	c;
@@ -257,7 +265,8 @@ inline static int loop(void)
 	return 0;
 }
 
-int main(int c, char **av)
+int
+main(int c, char **av)
 {
 	int	rez;
 	int	n;
@@ -284,7 +293,7 @@ L0:		fprintf(stderr,"Usage %s [options] <path1 ...,>\n",*av);
 	totsiz=0;
 	nexecs=0;
 	nprompt=DEFAULTNPROMPT;
-	lexec=NULL;
+	lexe=NULL;
 
 	while ((rez=getopt(c,av,SHORTOPTS))!=EOF) {
 		switch (rez) {
