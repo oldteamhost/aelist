@@ -51,11 +51,11 @@
 #define MODESHORT	0
 #define MODELINE	1
 #define MODELONG	2
-
 #define DEFAULTMODE	MODESHORT
 
 /* executable file */
-typedef struct __exe_t {
+typedef struct __exe_t
+{
 	char	name[2048];
 	char	path[2048];
 	size_t	siz;
@@ -72,8 +72,17 @@ size_t	execs_cap;		/* for realloc() */
 size_t	totsiz;			/* total size all binares */
 u_char	Sflag;			/* -S */
 
-inline static void noreturn
-finish(int sig)
+
+
+
+/*
+ *	F I N I S H
+ *
+ * terminates the program, clears
+ * memory, and returns the terminal
+ * to normal mode.
+ */
+inline static void noreturn finish(int sig)
 {
 	(void)sig;
 	endwin();
@@ -82,30 +91,45 @@ finish(int sig)
 	exit(0);
 }
 
-static const char *
-bytesfmt(size_t bytes)
-{
-	const char *sizes[]={
-		"B", "KiB", "MiB", "GiB", "TiB",
-		"PiB", "EiB"
-	};
-	static char	fmt[32];
-	double		c=(double)bytes;
-	int		i=0;
 
-	for (;c>=1024&&i<6;i++) 
+
+
+/*
+ *	B Y T E S F M T
+ *
+ * convert <n> bytes to formatted
+ * string presintation
+ */
+inline static const char *bytesfmt(size_t n)
+{
+	const char	*units[]={"B","KiB","MiB",
+				"GiB","TiB","PiB",
+				"EiB"};
+	double		c=(double)n;
+	static char	fmt[32];
+
+	for (n=0;c>=1024&&n<6;n++) 
 		c/=1024;
 
 	snprintf(fmt,sizeof(fmt),
-		"%.2f %s",c,sizes[i]);
+		"%.2f %s",c,units[n]);
 
 	return fmt;
 }
 
-inline static void
-exec(void)
+
+
+
+/*
+ *		E X E C
+ *
+ * this function create new fork, execute
+ * <lexe>, and close this process
+ */
+inline static void exec(void)
 {
-	pid_t pid;
+	pid_t	pid;
+
 	if (!lexe)
 		return;
 	pid=fork();
@@ -114,12 +138,17 @@ exec(void)
 	else if (pid==0) {
 		if (setsid()==-1)
 			_exit(1);
+
+		/* Is this closing threads, opening
+		 * /dev/null really necessary? */
 		close(STDIN_FILENO);
 		close(STDOUT_FILENO);
 		close(STDERR_FILENO);
 		open("/dev/null",O_RDONLY);
 		open("/dev/null",O_WRONLY);
 		open("/dev/null",O_WRONLY);
+
+		/* execute! */
 		execl(lexe->path,lexe->path,(char*)NULL);
 		if (execs)
 			free(execs);
@@ -127,11 +156,21 @@ exec(void)
 		perror("execl");
 		_exit(127);
 	}
+
 	finish(0);
 }
 
-inline static void
-search(char *in)
+
+
+
+/*
+ *		S E A R C H
+ *
+ * searches for a program by name from <in>,
+ * outputs the necessary information according
+ * to the mode
+ */
+inline static void search(char *in)
 {
 	size_t	fi,n,sum;
 	int	y,x;
@@ -153,7 +192,8 @@ search(char *in)
 				lexe=&execs[n];
 			if (mode==MODELONG||mode==MODESHORT)
 				mvprintw((Sflag)?0:1,0,"exec %s (%s)"
-					" %ld\n",lexe->path,bytesfmt(execs[n].siz),sum);
+					" %ld\n",lexe->path,
+					bytesfmt(execs[n].siz),sum);
 			if (mode==MODELONG) {
 				mvhline((Sflag)?2:3,0,ACS_HLINE,45);
 				mvprintw(fi+((Sflag)?2:3),0,"%s\n",
@@ -166,8 +206,20 @@ search(char *in)
 	move(y,x);
 }
 
-inline static void
-init(void)
+
+
+
+/*
+ *			I N I T
+ *
+ * collects information about all executable files in
+ * the directories specified by the user, stores them
+ * in <exe_t> in the <execs> array,
+ *
+ * allocating memory to it and increasing its size
+ * every <EXECS_STEP> by <EXECS_STEP>.
+ */
+inline static void init(void)
 {
 	exe_t		exe;
 	char		buf[65535];
@@ -214,8 +266,17 @@ init(void)
 	}
 }
 
-inline static int
-loop(void)
+
+
+
+/*
+ *		L O O P
+ *
+ * The main loop of the program, where it takes
+ * the unbuffered input in <in> and does the
+ * appropriate things on top of it.
+ */
+inline static int loop(void)
 {
 	char	in[2048];
 	chtype	c;
@@ -265,8 +326,13 @@ loop(void)
 	return 0;
 }
 
-int
-main(int c, char **av)
+
+
+
+/*
+ *	M A I N ()
+ */
+int main(int c, char **av)
 {
 	int	rez;
 	int	n;
@@ -274,8 +340,20 @@ main(int c, char **av)
 
 	signal(SIGINT,finish);
 	srand(time(NULL));
+
+	mode=DEFAULTMODE;
+	Sflag=0;
+	totsiz=0;
+	nexecs=0;
+	nprompt=DEFAULTNPROMPT;
+	lexe=NULL;
+	execs_cap=0;
+	execs=NULL;
+	npaths=0;
+	*paths=NULL;
+
 	if (c<=1) {
-L0:		fprintf(stderr,"Usage %s [options] <path1 ...,>\n",*av);
+L0:		fprintf(stderr,"Usage %s [options] <path ...,>\n",*av);
 		fprintf(stderr,"  -s \t\tenable short display mode\n");
 		fprintf(stderr,"  -L \t\tenable long display mode\n");
 		fprintf(stderr,"  -n <max> \tspecify the maximum number"
@@ -288,55 +366,48 @@ L0:		fprintf(stderr,"Usage %s [options] <path1 ...,>\n",*av);
 		finish(0);
 	}
 
-	mode=DEFAULTMODE;
-	Sflag=0;
-	totsiz=0;
-	nexecs=0;
-	nprompt=DEFAULTNPROMPT;
-	lexe=NULL;
-
 	while ((rez=getopt(c,av,SHORTOPTS))!=EOF) {
 		switch (rez) {
-			case 'S':
-				++Sflag;
-				break;
-			case 's':
-				mode=MODESHORT;
-				break;
-			case 'l':
-				mode=MODELINE;
-				break;
-			case 'L':
-				mode=MODELONG;
-				break;
-			case 'r':
-				mode=rand()%3;
-				break;
-			case 'n': {
-				unsigned long long val;
-				char *endp;
+		case 'S':
+			++Sflag;
+			break;
+		case 's':
+			mode=MODESHORT;
+			break;
+		case 'l':
+			mode=MODELINE;
+			break;
+		case 'L':
+			mode=MODELONG;
+			break;
+		case 'r':
+			mode=rand()%3;
+			break;
+		case 'n': {
+			unsigned long long val;
+			char *endp;
 
-				errno=0;
-				val=strtoull(optarg,&endp,10);
-				if (errno==ERANGE||val>
-						(unsigned long long)	
-						SIZE_MAX) {
+			errno=0;
+			val=strtoull(optarg,&endp,10);
+			if (errno==ERANGE||val>
+				(unsigned long long)	
+				SIZE_MAX) {
 L1:					fprintf(stderr,"Failed convert"
-						" \"%s\" to num\n",optarg);
-					finish(0);
-				}
-				while (isspace((u_char)*endp))
-					endp++;
-				if (*endp!='\0')
-					goto L1;
-				if (val<1||val>INT_MAX)
-					goto L1;
-
-				nprompt=(int)val;
-				break;
+					" \"%s\" to num\n",optarg);
+				finish(0);
 			}
-			case 'h': case '?': default:
-				goto L0;
+			while (isspace((u_char)*endp))
+				endp++;
+			if (*endp!='\0')
+				goto L1;
+			if (val<1||val>INT_MAX)
+				goto L1;
+
+			nprompt=(int)val;
+			break;
+		}
+		case 'h': case '?': default:
+			goto L0;
 		}
 	}
 
