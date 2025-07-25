@@ -25,7 +25,7 @@
  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -47,30 +47,35 @@
 #define SHORTOPTS	"sLn:lrhS"
 #define DEFAULTNPROMPT	30
 #define MAXPATHS	128
-
 #define MODESHORT	0
 #define MODELINE	1
 #define MODELONG	2
 #define DEFAULTMODE	MODESHORT
 
-/* executable file */
-typedef struct __exe_t
+/*
+ *	_ _ E X E _ T
+ *
+ * structure for representing an
+ * executable file
+ */
+typedef struct __exe_t exe_t;
+struct __exe_t
 {
 	char	name[2048];
 	char	path[2048];
 	size_t	siz;
-} exe_t;
+};
 
-int	nprompt;		/* -n */
-int	mode;			/* -slLr */
-char	*paths[MAXPATHS];	/* paths from args*/
-size_t	npaths;			/* number paths */
-exe_t	*execs;			/* executables */
-size_t	nexecs;			/* number executables */
-exe_t	*lexe;			/* last exe */
-size_t	execs_cap;		/* for realloc() */
-size_t	totsiz;			/* total size all binares */
-u_char	Sflag;			/* -S */
+int		nprompt;		/* -n */
+int		mode;			/* -slLr */
+char		*pv[MAXPATHS];		/* paths from args*/
+size_t		pvsiz;			/* number paths */
+exe_t		*ev;			/* executables */
+size_t		evsiz;			/* number executables */
+size_t		evcap;			/* for realloc() */
+exe_t		*last;			/* last exe */
+size_t		totsiz;			/* total size all binares */
+u_char		Sflag;			/* -S */
 
 
 
@@ -86,8 +91,8 @@ inline static void noreturn finish(int sig)
 {
 	(void)sig;
 	endwin();
-	if (execs)
-		free(execs);
+	if (ev)
+		free(ev);
 	exit(0);
 }
 
@@ -98,13 +103,12 @@ inline static void noreturn finish(int sig)
  *	B Y T E S F M T
  *
  * convert <n> bytes to formatted
- * string presintation
+ * string presintation.
  */
 inline static const char *bytesfmt(size_t n)
 {
-	const char	*units[]={"B","KiB","MiB",
-				"GiB","TiB","PiB",
-				"EiB"};
+	const char *units[]={"B","KiB","MiB","GiB",
+				"TiB","PiB","EiB"};
 	double		c=(double)n;
 	static char	fmt[32];
 
@@ -124,13 +128,13 @@ inline static const char *bytesfmt(size_t n)
  *		E X E C
  *
  * this function create new fork, execute
- * <lexe>, and close this process
+ * <last>, and close this process
  */
 inline static void exec(void)
 {
 	pid_t	pid;
 
-	if (!lexe)
+	if (!last)
 		return;
 	pid=fork();
 	if (pid==-1)
@@ -149,9 +153,9 @@ inline static void exec(void)
 		open("/dev/null",O_WRONLY);
 
 		/* execute! */
-		execl(lexe->path,lexe->path,(char*)NULL);
-		if (execs)
-			free(execs);
+		execl(last->path,last->path,(char*)NULL);
+		if (ev)
+			free(ev);
 		endwin();
 		perror("execl");
 		_exit(127);
@@ -172,32 +176,34 @@ inline static void exec(void)
  */
 inline static void search(char *in)
 {
-	size_t	fi,n,sum;
+	size_t	fi;
+	size_t	sum;
+	size_t	n;
 	int	y,x;
 	u_char	s;
 
 	sum=s=0;
 	getyx(stdscr,y,x);
-	for (n=0;n<nexecs;n++)
-		if (strstr(execs[n].name,in))
+	for (n=0;n<evsiz;n++)
+		if (strstr(ev[n].name,in))
 			++sum;
 	fi=1;
-	for (n=0;n<nexecs&&fi<=nprompt;n++) {
-		if (!strcmp(execs[n].name,in)) {
-			lexe=&execs[n];
+	for (n=0;n<evsiz&&fi<=nprompt;n++) {
+		if (!strcmp(ev[n].name,in)) {
+			last=&ev[n];
 			++s;
 		}
-		if (strstr(execs[n].name,in)) {
+		if (strstr(ev[n].name,in)) {
 			if (!s)
-				lexe=&execs[n];
+				last=&ev[n];
 			if (mode==MODELONG||mode==MODESHORT)
 				mvprintw((Sflag)?0:1,0,"exec %s (%s)"
-					" %ld\n",lexe->path,
-					bytesfmt(execs[n].siz),sum);
+					" %ld\n",last->path,
+					bytesfmt(ev[n].siz),sum);
 			if (mode==MODELONG) {
 				mvhline((Sflag)?2:3,0,ACS_HLINE,45);
 				mvprintw(fi+((Sflag)?2:3),0,"%s\n",
-					execs[n].name);
+					ev[n].name);
 			}
 			++fi;
 		}
@@ -214,7 +220,7 @@ inline static void search(char *in)
  *
  * collects information about all executable files in
  * the directories specified by the user, stores them
- * in <exe_t> in the <execs> array,
+ * in <exe_t> in the <ev> array,
  *
  * allocating memory to it and increasing its size
  * every <EXECS_STEP> by <EXECS_STEP>.
@@ -231,27 +237,27 @@ inline static void init(void)
 	d=NULL;
 	dir=NULL;
 
-	for (n=0;n<npaths;n++) {
-		if (!(dir=opendir(paths[n])))
+	for (n=0;n<pvsiz;n++) {
+		if (!(dir=opendir(pv[n])))
 			continue;
 		for (;(d=readdir(dir));) {
 			if (!strcmp(d->d_name, ".")||!strcmp(d->d_name, ".."))
 				continue;
 
 			bzero(buf,sizeof(buf));
-			snprintf(buf,sizeof(buf),"%s/%s",paths[n],d->d_name);
+			snprintf(buf,sizeof(buf),"%s/%s",pv[n],d->d_name);
 
 			if (stat(buf,&st)==-1)
 				continue;
 
-			if (nexecs==execs_cap) {
+			if (evsiz==evcap) {
 #define EXECS_STEP 512
-				t1=execs_cap+EXECS_STEP;
-				exe_t *t=realloc(execs,t1*sizeof(exe_t));
+				t1=evcap+EXECS_STEP;
+				exe_t *t=realloc(ev,t1*sizeof(exe_t));
 				if (!t)
 					finish(0);
-				execs=t;
-				execs_cap=t1;
+				ev=t;
+				evcap=t1;
 			}
 
 			bzero(&exe,sizeof(exe));
@@ -260,7 +266,7 @@ inline static void init(void)
 			exe.siz=st.st_size;
 			totsiz+=st.st_size;
 
-			execs[nexecs++]=exe;
+			ev[evsiz++]=exe;
 		}
 		closedir(dir);
 	}
@@ -292,11 +298,11 @@ inline static int loop(void)
 		case MODESHORT:
 			if (!Sflag)
 				mvprintw(0, 0, "loaded %ld files from"
-					" %ld paths (%s)\n",nexecs,
-					npaths,bytesfmt(totsiz));
+					" %ld paths (%s)\n",evsiz,
+					pvsiz,bytesfmt(totsiz));
 			mvprintw((Sflag)?0:1,0,"exec %s (%s)"
-				" %ld\n",execs->path,
-				bytesfmt(execs->siz),nexecs);
+				" %ld\n",ev->path,
+				bytesfmt(ev->siz),evsiz);
 			break;
 	}
 
@@ -344,13 +350,13 @@ int main(int c, char **av)
 	mode=DEFAULTMODE;
 	Sflag=0;
 	totsiz=0;
-	nexecs=0;
+	evsiz=0;
 	nprompt=DEFAULTNPROMPT;
-	lexe=NULL;
-	execs_cap=0;
-	execs=NULL;
-	npaths=0;
-	*paths=NULL;
+	last=NULL;
+	evcap=0;
+	ev=NULL;
+	pvsiz=0;
+	*pv=NULL;
 
 	if (c<=1) {
 L0:		fprintf(stderr,"Usage %s [options] <path ...,>\n",*av);
@@ -418,16 +424,16 @@ L1:					fprintf(stderr,"Failed convert"
 		fprintf(stderr,"Too many paths!\n");
 		finish(0);
 	}
-	npaths=n;
+	pvsiz=n;
 	n=optind;
 	j=0;
 	while (n<c) {
-		paths[j++]=av[n];
+		pv[j++]=av[n];
 		++n;
 	}
 
 	init();
-	if (nexecs==0) {
+	if (evsiz==0) {
 		fprintf(stderr,"Not found files in paths!\n");
 		finish(0);
 	}
