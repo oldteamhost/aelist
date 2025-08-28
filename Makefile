@@ -1,4 +1,4 @@
-FLAGS=-lncursesw -ltinfow -lpanel -O3 -g -Wall
+FLAGS=-lncurses -ltinfo -lpanel -O3 -g -Wall
 
 all:
 	gcc aelist.c -c $(FLAGS)
