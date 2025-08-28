@@ -37,5 +37,5 @@ Examples run,
 	./aelist -r /bin /usr/bin /sbin
 	./aelist -l /bin /usr/bin /sbin
 
-For example, I have it set like this (i3),
+For example, my i3 settings were as follows:
 	bindsym $mod+d exec --no-startup-id kitty /home/lomaster/aelist/aelist -L /bin /sbin /usr/bin /usr/sbin
